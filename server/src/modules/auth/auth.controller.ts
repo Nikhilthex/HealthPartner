@@ -12,10 +12,15 @@ export class AuthController {
     try {
       const payload = parseSchema(loginSchema, req.body);
       const user = await this.authService.authenticate(payload);
+      req.session.regenerate((error) => {
+        if (error) {
+          next(error);
+          return;
+        }
 
-      req.session.userId = user.id;
-
-      sendSuccess(res, { user });
+        req.session.userId = user.id;
+        sendSuccess(res, { user });
+      });
     } catch (error) {
       next(error);
     }
