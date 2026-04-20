@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int                @id @default(autoincrement())
+  username      String             @unique
+  passwordHash  String             @map("password_hash")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  alertSettings UserAlertSettings?
+  medicines     Medicine[]
+  reminders     ReminderEvent[]
+  reports       UploadedReport[]
+
+  @@map("users")
+}
+
+model UserAlertSettings {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique @map("user_id")
+  morningTime     String   @map("morning_time")
+  noonTime        String   @map("noon_time")
+  eveningTime     String   @map("evening_time")
+  preAlertMinutes Int      @default(15) @map("pre_alert_minutes")
+  onTimeEnabled   Boolean  @default(true) @map("on_time_enabled")
+  timezone        String
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_alert_settings")
+}
+
+model Medicine {
+  id                Int                 @id @default(autoincrement())
+  userId            Int                 @map("user_id")
+  rxName            String              @map("rx_name")
+  daysOfSupply      Int                 @map("days_of_supply")
+  totalAvailableQty Float               @map("total_available_qty")
+  remainingQty      Float               @map("remaining_qty")
+  notes             String?
+  isActive          Boolean             @default(true) @map("is_active")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schedules         MedicineSchedule[]
+  reminders         ReminderEvent[]
+  intakeLogs        MedicineIntakeLog[]
+
+  @@index([userId], map: "medicines_user_id_idx")
+  @@map("medicines")
+}
+
+model MedicineSchedule {
+  id         Int          @id @default(autoincrement())
+  medicineId Int          @map("medicine_id")
+  slot       String
+  enabled    Boolean      @default(true)
+  doseTime   String       @map("dose_time")
+  qty        Float
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+  medicine   Medicine     @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  reminders  ReminderEvent[]
+
+  @@unique([medicineId, slot], map: "medicine_schedules_medicine_slot_key")
+  @@map("medicine_schedules")
+}
+
+model ReminderEvent {
+  id          Int            @id @default(autoincrement())
+  userId      Int            @map("user_id")
+  medicineId  Int            @map("medicine_id")
+  scheduleId  Int            @map("schedule_id")
+  alertType   String         @map("alert_type")
+  scheduledFor DateTime      @map("scheduled_for")
+  status      String         @default("pending")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicine    Medicine       @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  schedule    MedicineSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  intakeLogs  MedicineIntakeLog[]
+
+  @@unique([userId, medicineId, scheduleId, alertType, scheduledFor], map: "reminder_events_dedupe_idx")
+  @@index([userId], map: "reminder_events_user_id_idx")
+  @@index([scheduledFor], map: "reminder_events_scheduled_for_idx")
+  @@map("reminder_events")
+}
+
+model MedicineIntakeLog {
+  id              Int       @id @default(autoincrement())
+  reminderEventId Int       @map("reminder_event_id")
+  medicineId      Int       @map("medicine_id")
+  qtyTaken        Float     @map("qty_taken")
+  takenAt         DateTime  @map("taken_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  reminderEvent   ReminderEvent @relation(fields: [reminderEventId], references: [id], onDelete: Cascade)
+  medicine        Medicine  @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+
+  @@map("medicine_intake_logs")
+}
+
+model UploadedReport {
+  id               Int            @id @default(autoincrement())
+  userId           Int            @map("user_id")
+  originalFilename String         @map("original_filename")
+  storedPath       String         @map("stored_path")
+  mimeType         String         @map("mime_type")
+  fileSize         Int            @map("file_size")
+  extractedText    String?        @map("extracted_text")
+  analysisStatus   String         @default("uploaded") @map("analysis_status")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis         ReportAnalysis?
+
+  @@index([userId], map: "uploaded_reports_user_id_idx")
+  @@map("uploaded_reports")
+}
+
+model ReportAnalysis {
+  id                      Int      @id @default(autoincrement())
+  reportId                Int      @unique @map("report_id")
+  summaryLayman           String   @map("summary_layman")
+  risksJson               String   @map("risks_json")
+  medicineSuggestionsJson String   @map("medicine_suggestions_json")
+  vitaminSuggestionsJson  String   @map("vitamin_suggestions_json")
+  notesJson               String   @map("notes_json")
+  disclaimer              String
+  aiModel                 String   @map("ai_model")
+  createdAt               DateTime @default(now()) @map("created_at")
+  report                  UploadedReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@map("report_analyses")
+}
