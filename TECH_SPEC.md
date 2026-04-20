@@ -305,64 +305,241 @@ Use a **modular monolith**:
 
 ## 8. API Design
 
-## 8.1 Auth API
+## 8.1 API Conventions
+
+### Base Path
+- All backend routes are served under `/api`.
+
+### Authentication
+- Authentication uses a secure session cookie set by the backend after successful login.
+- All routes except `POST /api/auth/login` require authentication.
+- Unauthorized requests return `401 Unauthorized`.
+
+### Content Types
+- JSON APIs use `Content-Type: application/json`.
+- Report upload uses `multipart/form-data`.
+
+### Date And Time Rules
+- Timestamps are returned as ISO 8601 UTC strings.
+- User-configurable medicine times remain in `HH:mm` format in the user's configured timezone.
+- `timezone` must be stored as an IANA timezone name such as `Asia/Kolkata`.
+
+### Standard Success Response
+
+```json
+{
+  "data": {},
+  "meta": {}
+}
+```
+
+Notes:
+- `meta` is optional.
+- List endpoints return arrays in `data`.
+
+### Standard Error Response
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "One or more fields are invalid.",
+    "details": [
+      {
+        "field": "username",
+        "message": "Username is required."
+      }
+    ]
+  }
+}
+```
+
+### Common HTTP Status Codes
+- `200 OK` for successful read/update operations
+- `201 Created` for successful creation
+- `400 Bad Request` for malformed requests
+- `401 Unauthorized` for unauthenticated access
+- `403 Forbidden` for cross-user access attempts
+- `404 Not Found` for missing resources
+- `409 Conflict` for duplicate or invalid state transitions
+- `422 Unprocessable Entity` for validation failures if the team prefers semantic validation errors
+- `500 Internal Server Error` for unexpected failures
+
+## 8.2 Auth API
 
 ### `POST /api/auth/login`
+
+Purpose:
+- Authenticates a user and creates a session.
+
 Request:
 ```json
 {
   "username": "demo",
-  "password": "secret"
+  "password": "secret123"
 }
 ```
 
-Response:
+Success Response `200 OK`:
 ```json
 {
-  "user": {
-    "id": 1,
-    "username": "demo"
+  "data": {
+    "user": {
+      "id": 1,
+      "username": "demo"
+    }
   }
 }
 ```
 
+Failure Cases:
+- `401` for invalid credentials
+- `422` for missing username or password
+
 ### `POST /api/auth/logout`
-Response:
+
+Purpose:
+- Clears the active session.
+
+Request:
+- No request body
+
+Success Response `200 OK`:
 ```json
 {
-  "success": true
+  "data": {
+    "success": true
+  }
 }
 ```
 
 ### `GET /api/auth/me`
-Response:
+
+Purpose:
+- Returns the currently authenticated user.
+
+Request:
+- No request body
+
+Success Response `200 OK`:
 ```json
 {
-  "user": {
-    "id": 1,
-    "username": "demo"
+  "data": {
+    "user": {
+      "id": 1,
+      "username": "demo"
+    }
   }
 }
 ```
 
-## 8.2 Medicines API
+## 8.3 Medicines API
 
 ### `GET /api/medicines`
-- Returns all medicines for the authenticated user
+
+Purpose:
+- Returns all medicines for the authenticated user.
+
+Query Parameters:
+- `includeInactive` optional boolean
+
+Success Response `200 OK`:
+```json
+{
+  "data": [
+    {
+      "id": 10,
+      "rxName": "Metformin",
+      "daysOfSupply": 30,
+      "totalAvailableQty": 60,
+      "remainingQty": 42,
+      "dailyQtyPlanned": 2,
+      "estimatedDepletionDate": "2026-05-11",
+      "schedules": [
+        {
+          "id": 100,
+          "slot": "morning",
+          "doseTime": "08:00",
+          "qty": 1,
+          "enabled": true
+        },
+        {
+          "id": 101,
+          "slot": "evening",
+          "doseTime": "20:00",
+          "qty": 1,
+          "enabled": true
+        }
+      ],
+      "createdAt": "2026-04-20T09:00:00.000Z",
+      "updatedAt": "2026-04-20T09:00:00.000Z"
+    }
+  ]
+}
+```
+
+### `GET /api/medicines/:id`
+
+Purpose:
+- Returns a single medicine with schedule details.
+
+Success Response `200 OK`:
+```json
+{
+  "data": {
+    "id": 10,
+    "rxName": "Metformin",
+    "daysOfSupply": 30,
+    "totalAvailableQty": 60,
+    "remainingQty": 42,
+    "dailyQtyPlanned": 2,
+    "estimatedDepletionDate": "2026-05-11",
+    "schedules": [
+      {
+        "id": 100,
+        "slot": "morning",
+        "doseTime": "08:00",
+        "qty": 1,
+        "enabled": true
+      },
+      {
+        "id": 101,
+        "slot": "evening",
+        "doseTime": "20:00",
+        "qty": 1,
+        "enabled": true
+      }
+    ],
+    "createdAt": "2026-04-20T09:00:00.000Z",
+    "updatedAt": "2026-04-20T09:00:00.000Z"
+  }
+}
+```
 
 ### `POST /api/medicines`
+
+Purpose:
+- Creates a medicine and its enabled schedule rows.
+
 Request:
 ```json
 {
   "rxName": "Metformin",
   "daysOfSupply": 30,
   "totalAvailableQty": 60,
+  "notes": "Take after food",
   "schedules": [
     {
       "slot": "morning",
       "enabled": true,
       "doseTime": "08:00",
       "qty": 1
+    },
+    {
+      "slot": "noon",
+      "enabled": false,
+      "doseTime": "13:00",
+      "qty": 0
     },
     {
       "slot": "evening",
@@ -374,18 +551,150 @@ Request:
 }
 ```
 
+Success Response `201 Created`:
+```json
+{
+  "data": {
+    "id": 10,
+    "rxName": "Metformin",
+    "daysOfSupply": 30,
+    "totalAvailableQty": 60,
+    "remainingQty": 60,
+    "dailyQtyPlanned": 2,
+    "estimatedDepletionDate": "2026-05-20",
+    "notes": "Take after food",
+    "schedules": [
+      {
+        "id": 100,
+        "slot": "morning",
+        "doseTime": "08:00",
+        "qty": 1,
+        "enabled": true
+      },
+      {
+        "id": 101,
+        "slot": "evening",
+        "doseTime": "20:00",
+        "qty": 1,
+        "enabled": true
+      }
+    ],
+    "createdAt": "2026-04-20T09:05:00.000Z",
+    "updatedAt": "2026-04-20T09:05:00.000Z"
+  }
+}
+```
+
+Validation Notes:
+- At least one schedule must be enabled.
+- Enabled schedules must include both `doseTime` and `qty`.
+- `daysOfSupply`, `totalAvailableQty`, and `qty` must be positive numbers.
+
 ### `PUT /api/medicines/:id`
-- Updates base medicine details and schedules
+
+Purpose:
+- Updates medicine details and rebuilds future reminder events if schedule-related fields change.
+
+Request:
+```json
+{
+  "rxName": "Metformin XR",
+  "daysOfSupply": 45,
+  "totalAvailableQty": 90,
+  "remainingQty": 44,
+  "notes": "Take after dinner",
+  "schedules": [
+    {
+      "slot": "morning",
+      "enabled": true,
+      "doseTime": "08:30",
+      "qty": 1
+    },
+    {
+      "slot": "evening",
+      "enabled": true,
+      "doseTime": "20:30",
+      "qty": 1
+    }
+  ]
+}
+```
+
+Success Response `200 OK`:
+```json
+{
+  "data": {
+    "id": 10,
+    "rxName": "Metformin XR",
+    "daysOfSupply": 45,
+    "totalAvailableQty": 90,
+    "remainingQty": 44,
+    "dailyQtyPlanned": 2,
+    "estimatedDepletionDate": "2026-05-12",
+    "notes": "Take after dinner",
+    "schedules": [
+      {
+        "id": 100,
+        "slot": "morning",
+        "doseTime": "08:30",
+        "qty": 1,
+        "enabled": true
+      },
+      {
+        "id": 101,
+        "slot": "evening",
+        "doseTime": "20:30",
+        "qty": 1,
+        "enabled": true
+      }
+    ],
+    "updatedAt": "2026-04-20T09:20:00.000Z"
+  }
+}
+```
 
 ### `DELETE /api/medicines/:id`
-- Soft delete is preferred if audit history matters
+
+Purpose:
+- Deletes or archives a medicine and cancels future reminder events for it.
+
+Request:
+- No request body
+
+Success Response `200 OK`:
+```json
+{
+  "data": {
+    "success": true,
+    "id": 10
+  }
+}
+```
 
 ### `POST /api/medicines/:id/intake`
+
+Purpose:
+- Logs a taken dose, reduces remaining quantity, and completes the related reminder.
+
 Request:
 ```json
 {
   "reminderEventId": 123,
-  "qtyTaken": 1
+  "qtyTaken": 1,
+  "takenAt": "2026-04-20T14:30:00.000Z"
+}
+```
+
+Success Response `200 OK`:
+```json
+{
+  "data": {
+    "medicineId": 10,
+    "remainingQty": 41,
+    "reminderEventId": 123,
+    "reminderStatus": "taken",
+    "intakeLogId": 501
+  }
 }
 ```
 
@@ -394,21 +703,58 @@ Behavior:
 - Decrement `remaining_qty`
 - Mark reminder as `taken`
 
-## 8.3 Alert Settings API
+## 8.4 Alert Settings API
 
 ### `GET /api/alert-settings`
-- Returns the current user's default alert settings
+
+Purpose:
+- Returns the current user's default reminder settings.
+
+Success Response `200 OK`:
+```json
+{
+  "data": {
+    "morningTime": "08:00",
+    "noonTime": "13:00",
+    "eveningTime": "20:00",
+    "preAlertMinutes": 15,
+    "onTimeEnabled": true,
+    "timezone": "Asia/Kolkata"
+  }
+}
+```
 
 ### `PUT /api/alert-settings`
+
+Purpose:
+- Updates default reminder times and future event generation rules.
+
 Request:
 ```json
 {
-  "morningTime": "08:00",
-  "noonTime": "13:00",
-  "eveningTime": "20:00",
+  "morningTime": "07:30",
+  "noonTime": "13:15",
+  "eveningTime": "20:30",
   "preAlertMinutes": 15,
   "onTimeEnabled": true,
   "timezone": "Asia/Kolkata"
+}
+```
+
+Success Response `200 OK`:
+```json
+{
+  "data": {
+    "morningTime": "07:30",
+    "noonTime": "13:15",
+    "eveningTime": "20:30",
+    "preAlertMinutes": 15,
+    "onTimeEnabled": true,
+    "timezone": "Asia/Kolkata"
+  },
+  "meta": {
+    "futureRemindersRebuilt": true
+  }
 }
 ```
 
@@ -416,41 +762,224 @@ Behavior:
 - Update defaults
 - Rebuild future reminder events for active medicines
 
-## 8.4 Reports API
+## 8.5 Reminder Events API
 
-### `POST /api/reports/upload`
-- Multipart file upload
-- Persists metadata
-- Returns report id
+### `GET /api/reminders/due`
 
-### `POST /api/reports/:id/analyze`
-- Starts analysis
-- Option A: synchronous for small files
-- Option B: async background job with status polling
+Purpose:
+- Returns reminder popups due for display within a rolling window.
 
-### `GET /api/reports/:id`
-- Returns file metadata and current analysis status
+Query Parameters:
+- `now` optional ISO timestamp
+- `windowMinutes` optional integer, default `15`
 
-### `GET /api/reports/:id/analysis`
-Response:
+Success Response `200 OK`:
 ```json
 {
-  "summaryLayman": "Your report suggests that your blood sugar is higher than the usual range.",
-  "risks": [
-    "May indicate poor blood sugar control"
+  "data": [
+    {
+      "id": 123,
+      "medicineId": 10,
+      "rxName": "Metformin XR",
+      "slot": "evening",
+      "alertType": "pre",
+      "doseTime": "20:30",
+      "qty": 1,
+      "scheduledFor": "2026-04-20T14:45:00.000Z",
+      "status": "pending",
+      "displayMessage": "Reminder: Take 1 dose of Metformin XR at 20:30."
+    }
   ],
-  "medicineSuggestions": [
-    "Discuss diabetic medication review with your doctor"
-  ],
-  "vitaminSuggestions": [
-    "Ask whether vitamin D testing is needed"
-  ],
-  "importantNotes": [
-    "Do not start or stop any medicine without medical advice"
-  ],
-  "disclaimer": "This analysis is informational only and not a diagnosis."
+  "meta": {
+    "serverTime": "2026-04-20T14:40:00.000Z",
+    "windowMinutes": 15
+  }
 }
 ```
+
+### `POST /api/reminders/:id/acknowledge`
+
+Purpose:
+- Marks a reminder popup as seen by the user.
+
+Request:
+```json
+{
+  "acknowledgedAt": "2026-04-20T14:42:00.000Z"
+}
+```
+
+Success Response `200 OK`:
+```json
+{
+  "data": {
+    "id": 123,
+    "status": "shown"
+  }
+}
+```
+
+### `POST /api/reminders/:id/dismiss`
+
+Purpose:
+- Dismisses a reminder without marking medicine as taken.
+
+Request:
+```json
+{
+  "dismissedAt": "2026-04-20T14:43:00.000Z",
+  "reason": "user_dismissed"
+}
+```
+
+Success Response `200 OK`:
+```json
+{
+  "data": {
+    "id": 123,
+    "status": "dismissed"
+  }
+}
+```
+
+## 8.6 Reports API
+
+### `POST /api/reports/upload`
+
+Purpose:
+- Uploads a supported report file and persists report metadata.
+
+Request:
+- `multipart/form-data`
+- Field name: `reportFile`
+
+Supported MIME Types:
+- `application/pdf`
+- `image/png`
+- `image/jpeg`
+
+Success Response `201 Created`:
+```json
+{
+  "data": {
+    "id": 77,
+    "originalFilename": "blood-report-april.pdf",
+    "mimeType": "application/pdf",
+    "fileSize": 248221,
+    "analysisStatus": "uploaded",
+    "createdAt": "2026-04-20T10:10:00.000Z"
+  }
+}
+```
+
+### `GET /api/reports`
+
+Purpose:
+- Returns the user's uploaded report history.
+
+Success Response `200 OK`:
+```json
+{
+  "data": [
+    {
+      "id": 77,
+      "originalFilename": "blood-report-april.pdf",
+      "mimeType": "application/pdf",
+      "fileSize": 248221,
+      "analysisStatus": "completed",
+      "createdAt": "2026-04-20T10:10:00.000Z",
+      "updatedAt": "2026-04-20T10:11:10.000Z"
+    }
+  ]
+}
+```
+
+### `GET /api/reports/:id`
+
+Purpose:
+- Returns a single report's metadata and processing state.
+
+Success Response `200 OK`:
+```json
+{
+  "data": {
+    "id": 77,
+    "originalFilename": "blood-report-april.pdf",
+    "mimeType": "application/pdf",
+    "fileSize": 248221,
+    "analysisStatus": "processing",
+    "createdAt": "2026-04-20T10:10:00.000Z",
+    "updatedAt": "2026-04-20T10:10:30.000Z"
+  }
+}
+```
+
+### `POST /api/reports/:id/analyze`
+
+Purpose:
+- Starts AI analysis for a previously uploaded report.
+
+Request:
+```json
+{
+  "analysisMode": "sync"
+}
+```
+
+Success Response `202 Accepted`:
+```json
+{
+  "data": {
+    "reportId": 77,
+    "analysisStatus": "processing"
+  }
+}
+```
+
+Implementation Notes:
+- `sync` may still respond with `200` and embedded analysis for smaller reports if the team chooses inline execution.
+- `async` is recommended once OCR or larger file handling is added.
+
+### `GET /api/reports/:id/analysis`
+
+Purpose:
+- Returns the AI-generated normalized analysis contract.
+
+Success Response `200 OK`:
+```json
+{
+  "data": {
+    "reportId": 77,
+    "summaryLayman": "Your report suggests that your blood sugar is above the normal range and should be reviewed with your doctor.",
+    "risks": [
+      "May indicate poor blood sugar control",
+      "Could need follow-up testing"
+    ],
+    "medicineSuggestions": [
+      "Discuss diabetic medicine review with your doctor"
+    ],
+    "vitaminSuggestions": [
+      "Ask whether vitamin D and B12 evaluation is needed"
+    ],
+    "importantNotes": [
+      "Do not start or stop any medicine without medical advice"
+    ],
+    "disclaimer": "This analysis is informational only and not a diagnosis.",
+    "aiModel": "gpt-5.4-mini",
+    "createdAt": "2026-04-20T10:11:10.000Z"
+  }
+}
+```
+
+## 8.7 API Testing Contract
+
+The API test suite should assert:
+- success status code
+- response body schema
+- auth protection
+- validation failures
+- cross-user access denial for protected resources
+- side effects such as reminder regeneration and stock decrement
 
 ## 9. Reminder Scheduling Design
 
