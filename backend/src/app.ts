@@ -1,4 +1,5 @@
 import express from 'express';
+import swaggerUi from 'swagger-ui-express';
 import { correlationIdMiddleware } from './shared/middleware/correlation-id';
 import { errorHandler, notFoundHandler } from './shared/middleware/error-handler';
 import { requestLogger } from './shared/logger';
@@ -7,6 +8,7 @@ import { createMedicinesRouter } from './modules/medicines/routes';
 import { createAlertSettingsRouter } from './modules/alerts/routes';
 import { createRemindersRouter } from './modules/reminders/routes';
 import { createReportsRouter } from './modules/reports/routes';
+import { openApiDocument } from './docs/openapi';
 
 export function createApp(): express.Express {
   const app = express();
@@ -16,6 +18,8 @@ export function createApp(): express.Express {
   app.use(requestLogger);
 
   app.get('/api/health', (_req, res) => sendSuccess(res, 200, { status: 'ok' }));
+  app.get('/api/openapi.json', (_req, res) => res.status(200).json(openApiDocument));
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
   app.use('/api/medicines', createMedicinesRouter());
   app.use('/api/alert-settings', createAlertSettingsRouter());
