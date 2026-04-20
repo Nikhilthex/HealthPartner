@@ -54,6 +54,37 @@ The primary UI must expose exactly three authenticated tabs:
 - Always show a disclaimer with report analysis results.
 - Avoid sending unnecessary personally identifiable data to the AI provider.
 
+## Code Compliance Checks
+
+Every contribution must pass these compliance checks before it is merged or treated as complete:
+
+- The owning module is identified before implementation starts.
+- Validation schemas are added or updated before route and service wiring.
+- Business logic remains in services, not controllers, route handlers, or React presentation components.
+- Persistence access stays inside the owning backend module or approved shared infrastructure helpers.
+- Shared logic is added to `shared` only when it is truly cross-module and documented.
+- Contracts for new or changed modules include inputs, outputs, and test coverage notes.
+- User-facing flows handle loading, empty, validation, error, and success states explicitly.
+- Backend APIs, backend services, and UI flows have the required automated tests from this document.
+- Documentation is updated when behavior, contracts, environment variables, or setup steps change.
+
+## Security Guardrails
+
+- Enforce authentication on all protected routes with server-side checks.
+- Enforce authorization so each user can access only their own medicines, alerts, reminders, and uploaded reports.
+- Hash passwords with `bcrypt`, `argon2`, or an equivalent modern password hashing function.
+- Keep secrets in environment variables or a secret manager, never in client code or committed config.
+- Use secure session or token settings, including expiration and transport protections.
+- Validate, sanitize, and constrain all request bodies, query params, route params, and file uploads.
+- Reject unsupported file types and oversized uploads before processing report content.
+- Never trust client-provided schedule values, quantity math, reminder status, or ownership identifiers.
+- Make inventory mutations transactional, auditable, and resilient to concurrent updates.
+- Avoid logging sensitive personal data, secrets, access tokens, or raw AI-provider payloads unless redacted.
+- Return safe client errors that do not leak stack traces, secret values, or internal infrastructure details.
+- Minimize data sent to third-party AI providers and strip unnecessary personally identifiable information where possible.
+- Schema-validate every AI response before persistence or rendering, and fail closed on malformed output.
+- Dependency changes should be reviewed for known vulnerabilities and unnecessary package sprawl.
+
 ## Testing Guardrails
 
 No feature is complete until both API and UI tests are in place.

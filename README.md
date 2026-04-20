@@ -133,6 +133,37 @@ UPLOAD_DIR=./uploads
 
 Every backend API and every major UI flow must ship with automated tests. Details are documented in [AGENTS.md](AGENTS.md) and [TECH_SPEC.md](TECH_SPEC.md).
 
+## Code Compliance Checklist
+
+All implementation work should pass the following compliance checks before it is considered complete:
+
+- Module ownership is clear and the change lives in the correct backend or frontend domain.
+- Route handlers/controllers stay thin and delegate business logic to services.
+- All server inputs are validated with explicit schemas before use.
+- Shared utilities are reused from `shared` instead of duplicated across modules.
+- No secrets, tokens, or provider keys are hardcoded in source files or exposed to the client.
+- AI responses are schema-validated and rendered with a user-facing disclaimer.
+- Medicine quantity, reminder generation, and alert timing logic are tested for edge cases and data integrity.
+- UI flows include loading, empty, error, validation, and success states.
+- API, service, and UI tests are added or updated for every behavior change.
+- Documentation is updated whenever contracts, workflows, or environment variables change.
+
+## Security Guardrails
+
+- Hash passwords with a strong one-way algorithm such as `bcrypt` or `argon2`.
+- Protect authenticated routes with server-side auth checks and never trust client auth state by itself.
+- Validate and sanitize all request payloads, uploaded files, and AI-provider responses.
+- Keep `AI_API_KEY`, session secrets, and other credentials only in environment variables or secret stores.
+- Use secure cookies if session auth is chosen, including `HttpOnly`, `Secure`, and appropriate `SameSite` settings.
+- If JWTs are used, enforce strong signing secrets, expiration, and server-side verification on protected routes.
+- Apply authorization checks so users can only access their own medicines, reminders, alerts, and reports.
+- Make reminder regeneration idempotent to avoid duplicate future notifications.
+- Store medicine stock changes with an audit trail so quantity updates remain traceable.
+- Limit report data sent to the AI provider to the minimum fields required for analysis.
+- Reject unsupported upload types and enforce file size limits for report uploads.
+- Avoid logging passwords, raw secrets, full tokens, or unnecessary personally identifiable data.
+- Return safe error messages to clients and keep detailed diagnostics in server logs only.
+
 ## Important Product Guardrail
 
 AI-based report analysis must be framed as informational support only. The app must not present itself as a doctor, diagnosis engine, or prescription authority. Output should always include a short clinical-disclaimer message.
