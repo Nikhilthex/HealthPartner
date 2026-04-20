@@ -2,7 +2,7 @@
 
 Health Partner is a modular monolith web application for basic medication management and AI-assisted health report analysis. The first release is designed around a simple username/password login, medicine reminders with customizable alerts, and report upload with AI-generated summaries and risk suggestions in plain language.
 
-This repository currently contains the delivery blueprint and engineering guardrails for implementation.
+This repository contains the delivery blueprint and an initial React frontend implementation for medicine reminders, alert customization, and report analysis. Backend implementation is still expected to provide the API contracts documented in [APIDoc.md](APIDoc.md).
 
 ## Planned Features
 
@@ -67,6 +67,14 @@ health-partner/
   README.md
   TECH_SPEC.md
   AGENTS.md
+  ai-health-planner/
+    frontend/
+      src/
+        features/
+          medicines/
+          alerts/
+          reports/
+        shared/
   server/
     src/
       app.ts
