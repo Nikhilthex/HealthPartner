@@ -67,6 +67,13 @@ health-partner/
   README.md
   TECH_SPEC.md
   AGENTS.md
+  frontend/
+    src/
+      features/
+        medicines/
+        alerts/
+        reports/
+      shared/
   server/
     src/
       app.ts
