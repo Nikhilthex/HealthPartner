@@ -1,0 +1,10 @@
+node_modules/
+dist/
+data/*.db
+data/*.db-journal
+uploads/*
+!uploads/.gitkeep
+uploads-test/*
+!data/.gitkeep
+test-results/
+playwright-report/
