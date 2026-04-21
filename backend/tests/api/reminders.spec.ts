@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { DateTime } from 'luxon';
-import { createMedicineForTest, isoNowRounded, uniqueName } from './helpers';
+import { createMedicineForTest, isoNowRounded, loginAsDemo, uniqueName } from './helpers';
 
 test.describe('Reminder APIs', () => {
+  test.beforeEach(async ({ request }) => {
+    await loginAsDemo(request);
+  });
+
   test('GET /api/reminders/due validates query params', async ({ request }) => {
     const response = await request.get('/api/reminders/due', {
       params: {
@@ -92,5 +96,12 @@ test.describe('Reminder APIs', () => {
       }
     });
     expect(dismissResponse.status()).toBe(404);
+  });
+
+  test('GET /api/reminders/due requires auth', async ({ playwright, baseURL }) => {
+    const request = await playwright.request.newContext({ baseURL });
+    const response = await request.get('/api/reminders/due');
+    expect(response.status()).toBe(401);
+    await request.dispose();
   });
 });

@@ -5,7 +5,7 @@ import { env } from '../../config/env';
 import { errorFactory } from '../../shared/errors';
 import { sendSuccess } from '../../shared/http/responses';
 import { validateRequest } from '../../shared/http/validate';
-import { getCurrentUserId } from '../../shared/user-context';
+import { getAuthenticatedUserId } from '../../shared/user-context';
 import { analyzeReportBodySchema, reportIdParamSchema } from './schemas';
 import {
   analyzeReportSync,
@@ -74,7 +74,7 @@ export function createReportsRouter(): Router {
 
       const relativePath = path.relative(process.cwd(), req.file.path).replace(/\\/g, '/');
       const result = await createUploadedReport({
-        userId: getCurrentUserId(),
+        userId: getAuthenticatedUserId(req),
         originalFilename: req.file.originalname,
         mimeType: req.file.mimetype,
         fileSize: req.file.size,
@@ -89,7 +89,7 @@ export function createReportsRouter(): Router {
 
   router.get('/', async (_req, res, next) => {
     try {
-      const result = await listReports(getCurrentUserId());
+      const result = await listReports(getAuthenticatedUserId(_req));
       return sendSuccess(res, 200, result);
     } catch (error) {
       return next(error);
@@ -99,7 +99,7 @@ export function createReportsRouter(): Router {
   router.get('/:id', validateRequest({ params: reportIdParamSchema }), async (req, res, next) => {
     try {
       const params = reportIdParamSchema.parse(req.params);
-      const result = await getReportById(getCurrentUserId(), params.id);
+      const result = await getReportById(getAuthenticatedUserId(req), params.id);
       return sendSuccess(res, 200, result);
     } catch (error) {
       return next(error);
@@ -114,7 +114,7 @@ export function createReportsRouter(): Router {
         const params = reportIdParamSchema.parse(req.params);
         analyzeReportBodySchema.parse(req.body);
         const result = await analyzeReportSync({
-          userId: getCurrentUserId(),
+          userId: getAuthenticatedUserId(req),
           reportId: params.id,
           correlationId: req.correlationId
         });
@@ -128,7 +128,7 @@ export function createReportsRouter(): Router {
   router.get('/:id/analysis', validateRequest({ params: reportIdParamSchema }), async (req, res, next) => {
     try {
       const params = reportIdParamSchema.parse(req.params);
-      const result = await getReportAnalysis(getCurrentUserId(), params.id);
+      const result = await getReportAnalysis(getAuthenticatedUserId(req), params.id);
       return sendSuccess(res, 200, result);
     } catch (error) {
       return next(error);

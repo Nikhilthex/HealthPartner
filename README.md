@@ -2,7 +2,7 @@
 
 Health Partner is a modular monolith web application for basic medication management and AI-assisted health report analysis. The first release is designed around a simple username/password login, medicine reminders with customizable alerts, and report upload with AI-generated summaries and risk suggestions in plain language.
 
-This repository currently contains the delivery blueprint and engineering guardrails for implementation.
+This repository now contains the working Health Partner application plus the planning and engineering guardrails used to shape it.
 
 ## Planned Features
 
@@ -25,7 +25,7 @@ This repository currently contains the delivery blueprint and engineering guardr
 
 ### 3. Report Analyze
 - Upload a health report file
-- Send extracted report data to an AI provider using a backend API key
+- Send extracted report data to the OpenAI Responses API using a backend-only API key
 - Return:
   - Report summary in layman terms
   - Potential risks to discuss with a clinician
@@ -60,38 +60,46 @@ The app should be built as a **modular monolith**:
 
 This gives us simple deployment with clean internal boundaries.
 
-## Proposed Project Structure
+## Current Project Structure
 
 ```text
 health-partner/
   README.md
   TECH_SPEC.md
   AGENTS.md
-  server/
+  backend/
     src/
       app.ts
       config/
-      db/
       modules/
         auth/
         medicines/
         alerts/
+        reminders/
         reports/
         ai-analysis/
       shared/
+    prisma/
     tests/
   client/
     src/
-      app/
       components/
       features/
         auth/
         medicines/
         alerts/
         reports/
-      services/
       test/
+  server/   # legacy auth spike kept temporarily for reference; not the active app path
 ```
+
+## Active App Paths
+
+- Active backend: `backend/`
+- Active frontend: `client/`
+- Legacy prototype: `server/`
+
+The `server/` folder is an earlier auth-only spike and should not be treated as the current production backend. New implementation work should target `backend/` and `client/`.
 
 ## Core User Flow
 
@@ -102,16 +110,18 @@ health-partner/
 5. User uploads a medical report and clicks `Analyze`.
 6. Backend extracts report text, sends it to the AI service, validates the response, and returns a patient-friendly summary.
 
-## Planned Environment Variables
+## Runtime Environment Variables
 
 ```bash
 PORT=4000
 NODE_ENV=development
-DATABASE_URL=file:./data/healthpartner.db
+DATABASE_URL=file:../data/healthpartner.db
 SESSION_SECRET=change-me
-AI_API_KEY=change-me
-AI_MODEL=change-me
 UPLOAD_DIR=./uploads
+OPENAI_API_KEY=
+OPENAI_BASE_URL=
+OPENAI_MODEL=gpt-5.4-mini
+DEFAULT_TIMEZONE=Asia/Kolkata
 ```
 
 ## Delivery Priorities
@@ -132,6 +142,31 @@ UPLOAD_DIR=./uploads
 ## Testing Expectations
 
 Every backend API and every major UI flow must ship with automated tests. Details are documented in [AGENTS.md](AGENTS.md) and [TECH_SPEC.md](TECH_SPEC.md).
+
+## Verification Commands
+
+```bash
+# backend
+cd backend
+npm run build
+npm run test:api
+
+# frontend
+cd client
+npm test
+npm run build
+npm run test:e2e
+```
+
+## Current Status
+
+- Core app implementation for auth, medicines, alerts, reminders, reports, and AI analysis is in place.
+- The three primary authenticated tabs are implemented in the frontend:
+  - `Add Medicine`
+  - `Customize Alerts`
+  - `Analyze Reports`
+- Backend API coverage and frontend unit/browser coverage are passing.
+- Remaining follow-up work is mostly cleanup and future-scope enhancement, such as retiring the legacy `server/` spike and expanding Phase 2 features.
 
 ## Code Compliance Checklist
 

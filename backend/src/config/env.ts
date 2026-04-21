@@ -10,11 +10,11 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().default('file:../data/healthpartner.db'),
   UPLOAD_DIR: z.string().default('./uploads'),
-  AI_PROVIDER_URL: z.string().url().optional(),
-  AI_PROVIDER_API_KEY: z.string().optional(),
-  AI_MODEL: z.string().default('gpt-5.4-mini'),
-  DEFAULT_TIMEZONE: z.string().default('Asia/Kolkata'),
-  SINGLE_USER_ID: z.coerce.number().int().positive().default(1)
+  SESSION_SECRET: z.string().min(16).default('healthpartner-dev-session-secret'),
+  OPENAI_API_KEY: z.preprocess((value) => (value === '' ? undefined : value), z.string().optional()),
+  OPENAI_BASE_URL: z.preprocess((value) => (value === '' ? undefined : value), z.string().url().optional()),
+  OPENAI_MODEL: z.string().default(process.env.AI_MODEL ?? 'gpt-5.4-mini'),
+  DEFAULT_TIMEZONE: z.string().default('Asia/Kolkata')
 });
 
 export const env = envSchema.parse(process.env);

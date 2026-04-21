@@ -21,7 +21,7 @@ export const LoginPage = () => {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "demo",
-      password: "secret123"
+      password: "demo123"
     }
   });
 
@@ -42,7 +42,7 @@ export const LoginPage = () => {
       <section className="auth-card">
         <div className="auth-card__header">
           <h2>Login</h2>
-          <p className="muted">Use the local development account to continue.</p>
+          <p className="muted">Use your Health Partner username and password to continue.</p>
         </div>
 
         <form className="auth-form" onSubmit={onSubmit} noValidate>

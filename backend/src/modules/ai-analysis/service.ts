@@ -1,8 +1,11 @@
-import { env } from '../../config/env';
-import { errorFactory } from '../../shared/errors';
+import { AppError, errorFactory } from '../../shared/errors';
 import { logger } from '../../shared/logger';
 import { aiAnalysisSchema, type AiAnalysisPayload } from './schemas';
-import { buildAiProvider } from './providers';
+import {
+  buildDeterministicFallbackProvider,
+  buildOpenAiProvider,
+  type AiProviderAdapter
+} from './providers';
 
 export interface NormalizedAnalysis extends AiAnalysisPayload {
   disclaimer: string;
@@ -11,42 +14,83 @@ export interface NormalizedAnalysis extends AiAnalysisPayload {
 
 const DISCLAIMER = 'This analysis is informational only and not a diagnosis.';
 
-const provider = buildAiProvider();
+interface GenerateNormalizedAnalysisOptions {
+  primaryProvider?: AiProviderAdapter | null;
+  fallbackProvider?: AiProviderAdapter;
+}
 
-export async function generateNormalizedAnalysis(input: {
-  reportName: string;
-  mimeType: string;
-  extractedText: string;
-  correlationId?: string;
-}): Promise<NormalizedAnalysis> {
-  try {
-    const providerResult = await provider.runAnalysis({
-      extractedText: input.extractedText,
-      reportName: input.reportName,
-      mimeType: input.mimeType
+async function runValidatedProvider(
+  provider: AiProviderAdapter,
+  input: {
+    reportName: string;
+    mimeType: string;
+    extractedText: string;
+    correlationId?: string;
+  }
+): Promise<NormalizedAnalysis> {
+  const providerResult = await provider.runAnalysis({
+    extractedText: input.extractedText,
+    reportName: input.reportName,
+    mimeType: input.mimeType
+  });
+
+  const parsed = aiAnalysisSchema.safeParse(providerResult);
+  if (!parsed.success) {
+    logger.error('ai_analysis_schema_validation_failed', {
+      correlationId: input.correlationId,
+      provider: provider.providerName,
+      issues: parsed.error.issues
     });
+    throw errorFactory.dependency('AI response format was invalid.');
+  }
 
-    const parsed = aiAnalysisSchema.safeParse(providerResult);
-    if (!parsed.success) {
-      logger.error('ai_analysis_schema_validation_failed', {
-        correlationId: input.correlationId,
-        issues: parsed.error.issues
-      });
-      throw errorFactory.dependency('AI response format was invalid.');
+  return {
+    ...parsed.data,
+    disclaimer: DISCLAIMER,
+    aiModel: provider.modelName
+  };
+}
+
+function logProviderFailure(provider: AiProviderAdapter, correlationId: string | undefined, error: unknown): void {
+  logger.warn('ai_analysis_provider_failed_using_fallback', {
+    correlationId,
+    provider: provider.providerName,
+    model: provider.modelName,
+    message: error instanceof Error ? error.message : 'unknown_error'
+  });
+}
+
+export async function generateNormalizedAnalysis(
+  input: {
+    reportName: string;
+    mimeType: string;
+    extractedText: string;
+    correlationId?: string;
+  },
+  options: GenerateNormalizedAnalysisOptions = {}
+): Promise<NormalizedAnalysis> {
+  const primaryProvider = options.primaryProvider === undefined ? buildOpenAiProvider() : options.primaryProvider;
+  const fallbackProvider = options.fallbackProvider ?? buildDeterministicFallbackProvider();
+
+  if (primaryProvider) {
+    try {
+      return await runValidatedProvider(primaryProvider, input);
+    } catch (error) {
+      logProviderFailure(primaryProvider, input.correlationId, error);
     }
+  }
 
-    return {
-      ...parsed.data,
-      disclaimer: DISCLAIMER,
-      aiModel: env.AI_MODEL
-    };
+  try {
+    return await runValidatedProvider(fallbackProvider, input);
   } catch (error) {
-    if (error instanceof Error && 'statusCode' in error) {
+    if (error instanceof AppError) {
       throw error;
     }
 
     logger.error('ai_analysis_failed', {
       correlationId: input.correlationId,
+      provider: fallbackProvider.providerName,
+      model: fallbackProvider.modelName,
       message: error instanceof Error ? error.message : 'unknown_error'
     });
     throw errorFactory.dependency('Failed to generate report analysis.');

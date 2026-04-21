@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { DateTime } from 'luxon';
 import { validateRequest } from '../../shared/http/validate';
 import { sendSuccess } from '../../shared/http/responses';
-import { getCurrentUserId } from '../../shared/user-context';
+import { getAuthenticatedUserId } from '../../shared/user-context';
 import {
   acknowledgeReminderBodySchema,
   dismissReminderBodySchema,
@@ -16,7 +16,7 @@ export function createRemindersRouter(): Router {
 
   router.get('/due', validateRequest({ query: dueRemindersQuerySchema }), async (req, res, next) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getAuthenticatedUserId(req);
       const query = dueRemindersQuerySchema.parse(req.query);
       const nowIso = query.now ?? DateTime.utc().toISO();
 
@@ -38,7 +38,7 @@ export function createRemindersRouter(): Router {
     async (req, res, next) => {
       try {
         const result = await acknowledgeReminder({
-          userId: getCurrentUserId(),
+          userId: getAuthenticatedUserId(req),
           reminderId: reminderIdParamsSchema.parse(req.params).id
         });
         return sendSuccess(res, 200, result);
@@ -54,7 +54,7 @@ export function createRemindersRouter(): Router {
     async (req, res, next) => {
       try {
         const result = await dismissReminder({
-          userId: getCurrentUserId(),
+          userId: getAuthenticatedUserId(req),
           reminderId: reminderIdParamsSchema.parse(req.params).id
         });
         return sendSuccess(res, 200, result);

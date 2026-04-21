@@ -9,6 +9,20 @@ export function isoNowRounded(): string {
   return DateTime.utc().set({ second: 0, millisecond: 0 }).toISO() as string;
 }
 
+export async function loginAsDemo(request: APIRequestContext) {
+  const response = await request.post('/api/auth/login', {
+    data: {
+      username: 'demo',
+      password: 'demo123'
+    }
+  });
+
+  return {
+    response,
+    json: await response.json()
+  };
+}
+
 export async function createMedicineForTest(request: APIRequestContext, options?: { rxName?: string; doseTime?: string }) {
   const payload = {
     rxName: options?.rxName ?? uniqueName('Medicine'),

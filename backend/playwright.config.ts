@@ -24,7 +24,7 @@ export default defineConfig({
       DATABASE_URL: 'file:../data/healthpartner-test.db',
       UPLOAD_DIR: './uploads-test',
       DEFAULT_TIMEZONE: 'UTC',
-      SINGLE_USER_ID: '1'
+      SESSION_SECRET: 'healthpartner-test-session-secret'
     }
   }
 });

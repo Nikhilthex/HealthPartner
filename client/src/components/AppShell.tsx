@@ -1,7 +1,10 @@
-import { NavLink, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 
-import { PlaceholderTab } from "./PlaceholderTab";
 import { useAuth } from "../state/auth-context";
+import { ReminderPopup } from "./ReminderPopup";
+import { AlertsPage } from "../features/alerts/AlertsPage";
+import { MedicinesPage } from "../features/medicines/MedicinesPage";
+import { ReportsPage } from "../features/reports/ReportsPage";
 
 const navItems = [
   { to: "/app/medicines", label: "Add Medicine" },
@@ -15,10 +18,14 @@ export const AppShell = () => {
   return (
     <div className="shell">
       <aside className="shell__sidebar">
-        <div>
-          <p className="eyebrow">Health Partner</p>
-          <h1>Welcome, {user?.username}</h1>
-          <p className="muted">Your account is signed in and ready for the next feature slices.</p>
+        <div className="stack-gap">
+          <div>
+            <p className="eyebrow">Health Partner</p>
+            <h1>Welcome, {user?.username}</h1>
+            <p className="muted">
+              Manage medicines, customize reminder timing, and review report analysis in one workspace.
+            </p>
+          </div>
         </div>
 
         <nav className="shell__nav" aria-label="Primary">
@@ -40,35 +47,14 @@ export const AppShell = () => {
 
       <main className="shell__content">
         <Routes>
-          <Route
-            path="medicines"
-            element={
-              <PlaceholderTab
-                title="Add Medicine"
-                description="Medicine management will live here. The login flow is now ready for the rest of the authenticated app."
-              />
-            }
-          />
-          <Route
-            path="alerts"
-            element={
-              <PlaceholderTab
-                title="Customize Alerts"
-                description="Alert customization will plug into the authenticated shell next."
-              />
-            }
-          />
-          <Route
-            path="reports"
-            element={
-              <PlaceholderTab
-                title="Analyze Reports"
-                description="Report upload and AI analysis will be added on top of this protected app frame."
-              />
-            }
-          />
+          <Route path="medicines" element={<MedicinesPage />} />
+          <Route path="alerts" element={<AlertsPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="*" element={<Navigate replace to="/app/medicines" />} />
         </Routes>
       </main>
+
+      <ReminderPopup onRefreshMedicines={() => undefined} />
     </div>
   );
 };

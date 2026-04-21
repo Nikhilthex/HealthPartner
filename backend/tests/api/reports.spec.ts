@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test';
+import { loginAsDemo } from './helpers';
+
+const tinyPng = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAwMBASsJTYQAAAAASUVORK5CYII=',
+  'base64'
+);
 
 test.describe('Reports APIs', () => {
+  test.beforeEach(async ({ request }) => {
+    await loginAsDemo(request);
+  });
+
   test('POST /api/reports/upload validates mime type', async ({ request }) => {
     const response = await request.post('/api/reports/upload', {
       multipart: {
@@ -52,12 +62,16 @@ test.describe('Reports APIs', () => {
     const analyzeBody = await analyzeResponse.json();
     expect(analyzeBody.data.analysisStatus).toBe('completed');
     expect(analyzeBody.data.analysis.disclaimer).toContain('informational only');
+    expect(analyzeBody.data.analysis.summaryLayman).toContain('blood sugar');
+    expect(analyzeBody.data.analysis.risks).toContain('Blood sugar markers may be above the expected range.');
+    expect(analyzeBody.data.analysis.risks).toContain('Vitamin levels may need follow-up review.');
 
     const analysisResponse = await request.get(`/api/reports/${reportId}/analysis`);
     expect(analysisResponse.status()).toBe(200);
     const analysisBody = await analysisResponse.json();
     expect(analysisBody.data.reportId).toBe(reportId);
     expect(Array.isArray(analysisBody.data.risks)).toBeTruthy();
+    expect(analysisBody.data.summaryLayman).toContain('blood sugar');
   });
 
   test('POST /api/reports/:id/analyze validates body and handles 404', async ({ request }) => {
@@ -91,5 +105,49 @@ test.describe('Reports APIs', () => {
 
     const analysisResponse = await request.get(`/api/reports/${reportId}/analysis`);
     expect(analysisResponse.status()).toBe(404);
+  });
+
+  test('PNG upload can be analyzed and returns a safe summary even when OCR text is limited', async ({ request }) => {
+    const uploadResponse = await request.post('/api/reports/upload', {
+      multipart: {
+        reportFile: {
+          name: 'scan.png',
+          mimeType: 'image/png',
+          buffer: tinyPng
+        }
+      }
+    });
+
+    expect(uploadResponse.status()).toBe(201);
+    const uploadBody = await uploadResponse.json();
+    const reportId = uploadBody.data.id as number;
+
+    const analyzeResponse = await request.post(`/api/reports/${reportId}/analyze`, {
+      data: {
+        analysisMode: 'sync'
+      }
+    });
+
+    expect(analyzeResponse.status()).toBe(200);
+    const analyzeBody = await analyzeResponse.json();
+    expect(analyzeBody.data.analysisStatus).toBe('completed');
+    expect(analyzeBody.data.analysis.disclaimer).toContain('informational only');
+    expect(typeof analyzeBody.data.analysis.summaryLayman).toBe('string');
+    expect(analyzeBody.data.analysis.summaryLayman.length).toBeGreaterThan(20);
+  });
+
+  test('POST /api/reports/upload requires auth', async ({ playwright, baseURL }) => {
+    const request = await playwright.request.newContext({ baseURL });
+    const response = await request.post('/api/reports/upload', {
+      multipart: {
+        reportFile: {
+          name: 'blood-report.pdf',
+          mimeType: 'application/pdf',
+          buffer: Buffer.from('%PDF-1.4 mock report content')
+        }
+      }
+    });
+    expect(response.status()).toBe(401);
+    await request.dispose();
   });
 });

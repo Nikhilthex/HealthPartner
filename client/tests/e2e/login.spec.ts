@@ -6,7 +6,7 @@ test("logs in with the seeded local user and reaches the protected shell", async
   await expect(page.getByRole("heading", { name: "Login" })).toBeVisible();
 
   await page.getByLabel("Username").fill("demo");
-  await page.getByLabel("Password").fill("secret123");
+  await page.getByLabel("Password").fill("demo123");
   await page.getByRole("button", { name: "Login" }).click();
 
   await expect(page.getByRole("heading", { name: /welcome, demo/i })).toBeVisible();

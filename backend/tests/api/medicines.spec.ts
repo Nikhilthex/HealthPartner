@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { DateTime } from 'luxon';
-import { createMedicineForTest, isoNowRounded, uniqueName } from './helpers';
+import { createMedicineForTest, isoNowRounded, loginAsDemo, uniqueName } from './helpers';
 
 test.describe('Medicines APIs', () => {
+  test.beforeEach(async ({ request }) => {
+    await loginAsDemo(request);
+  });
+
   test('POST /api/medicines returns validation error for invalid schedules', async ({ request }) => {
     const response = await request.post('/api/medicines', {
       data: {
@@ -154,5 +158,12 @@ test.describe('Medicines APIs', () => {
     });
     const allBody = await listAll.json();
     expect(allBody.data.some((item: { id: number }) => item.id === id)).toBeTruthy();
+  });
+
+  test('GET /api/medicines requires auth', async ({ playwright, baseURL }) => {
+    const request = await playwright.request.newContext({ baseURL });
+    const response = await request.get('/api/medicines');
+    expect(response.status()).toBe(401);
+    await request.dispose();
   });
 });

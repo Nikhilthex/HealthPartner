@@ -55,6 +55,22 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     };
   }, []);
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      setErrorMessage("Your session expired. Please log in again.");
+      startTransition(() => {
+        navigate("/login", { replace: true });
+      });
+    };
+
+    window.addEventListener("healthpartner:unauthorized", handleUnauthorized);
+
+    return () => {
+      window.removeEventListener("healthpartner:unauthorized", handleUnauthorized);
+    };
+  }, [navigate]);
+
   const login = async (values: { username: string; password: string }) => {
     setLoginPending(true);
     setErrorMessage(null);
@@ -62,6 +78,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     try {
       const nextUser = await authApi.login(values);
       setUser(nextUser);
+
       startTransition(() => {
         navigate("/app/medicines", { replace: true });
       });
@@ -83,6 +100,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         navigate("/login", { replace: true });
       });
     } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        return;
+      }
       setErrorMessage(error instanceof Error ? error.message : "Unable to logout.");
     } finally {
       setLogoutPending(false);

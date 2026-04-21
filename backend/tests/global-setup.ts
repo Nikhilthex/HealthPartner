@@ -13,7 +13,9 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
       NODE_ENV: 'test',
       DATABASE_URL: 'file:../data/healthpartner-test.db',
       UPLOAD_DIR: './uploads-test',
-      SINGLE_USER_ID: '1'
+      SESSION_SECRET: 'healthpartner-test-session-secret',
+      OPENAI_API_KEY: '',
+      OPENAI_BASE_URL: ''
     }
   });
 }

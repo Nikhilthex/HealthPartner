@@ -1,8 +1,7 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import { errorFactory } from '../../shared/errors';
 import { prisma } from '../../shared/prisma/client';
 import { generateNormalizedAnalysis } from '../ai-analysis/service';
+import { extractReportText } from './extraction';
 
 const ANALYSIS_STATUS = {
   UPLOADED: 'uploaded',
@@ -86,24 +85,6 @@ export async function getReportById(userId: number, reportId: number) {
     createdAt: report.createdAt.toISOString(),
     updatedAt: report.updatedAt.toISOString()
   };
-}
-
-async function extractReportText(report: {
-  storedPath: string;
-  originalFilename: string;
-  mimeType: string;
-  fileSize: number;
-}): Promise<string> {
-  const absolutePath = path.resolve(process.cwd(), report.storedPath);
-  const buffer = await fs.readFile(absolutePath);
-  const preview = buffer.subarray(0, 256).toString('utf8').replace(/[^\x20-\x7E]+/g, ' ').trim();
-
-  return [
-    `File Name: ${report.originalFilename}`,
-    `MIME: ${report.mimeType}`,
-    `File Size: ${report.fileSize}`,
-    `Preview: ${preview || 'No readable text preview available.'}`
-  ].join('\n');
 }
 
 export async function analyzeReportSync(input: {

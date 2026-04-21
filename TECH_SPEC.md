@@ -376,7 +376,7 @@ Request:
 ```json
 {
   "username": "demo",
-  "password": "secret123"
+  "password": "demo123"
 }
 ```
 

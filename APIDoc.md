@@ -12,6 +12,7 @@ This document defines the REST API contracts for Health Partner. It is intended 
 ### Authentication
 - Session-cookie based authentication
 - All endpoints require authentication except `POST /api/auth/login`
+- Default seeded local credentials for development and tests: `demo` / `demo123`
 
 ### Request Content Types
 - `application/json` for standard APIs
@@ -83,7 +84,7 @@ Sample Request Body:
 ```json
 {
   "username": "demo",
-  "password": "secret123"
+  "password": "demo123"
 }
 ```
 
@@ -656,12 +657,32 @@ Sample Request Body:
 }
 ```
 
-Sample Success Response `202 Accepted`:
+Sample Success Response `200 OK`:
 ```json
 {
   "data": {
     "reportId": 77,
-    "analysisStatus": "processing"
+    "analysisStatus": "completed",
+    "analysis": {
+      "reportId": 77,
+      "summaryLayman": "Your report suggests that your blood sugar is above the normal range and should be reviewed with your doctor.",
+      "risks": [
+        "May indicate poor blood sugar control",
+        "Could need follow-up testing"
+      ],
+      "medicineSuggestions": [
+        "Discuss diabetic medicine review with your doctor"
+      ],
+      "vitaminSuggestions": [
+        "Ask whether vitamin D and B12 evaluation is needed"
+      ],
+      "importantNotes": [
+        "Do not start or stop any medicine without medical advice"
+      ],
+      "disclaimer": "This analysis is informational only and not a diagnosis.",
+      "aiModel": "gpt-5.4-mini",
+      "createdAt": "2026-04-20T10:11:10.000Z"
+    }
   }
 }
 ```

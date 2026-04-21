@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { loginAsDemo } from './helpers';
 
 test.describe('Alert Settings APIs', () => {
+  test.beforeEach(async ({ request }) => {
+    await loginAsDemo(request);
+  });
+
   test('GET /api/alert-settings returns defaults', async ({ request }) => {
     const response = await request.get('/api/alert-settings');
     expect(response.status()).toBe(200);
@@ -50,5 +55,12 @@ test.describe('Alert Settings APIs', () => {
     expect(fetchBody.data.morningTime).toBe('07:30');
     expect(fetchBody.data.preAlertMinutes).toBe(10);
     expect(fetchBody.data.timezone).toBe('UTC');
+  });
+
+  test('GET /api/alert-settings requires auth', async ({ playwright, baseURL }) => {
+    const request = await playwright.request.newContext({ baseURL });
+    const response = await request.get('/api/alert-settings');
+    expect(response.status()).toBe(401);
+    await request.dispose();
   });
 });
