@@ -67,14 +67,13 @@ health-partner/
   README.md
   TECH_SPEC.md
   AGENTS.md
-  ai-health-planner/
-    frontend/
-      src/
-        features/
-          medicines/
-          alerts/
-          reports/
-        shared/
+  frontend/
+    src/
+      features/
+        medicines/
+        alerts/
+        reports/
+      shared/
   server/
     src/
       app.ts
